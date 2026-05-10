@@ -94,6 +94,8 @@ class Database:
         ALTER TABLE engine_audit DROP COLUMN IF EXISTS actual_outcome;
         ALTER TABLE engine_audit DROP COLUMN IF EXISTS is_correct;
         
+        DELETE FROM engine_audit a USING engine_audit b WHERE a.id < b.id AND a.issue_number = b.issue_number;
+        CREATE UNIQUE INDEX IF NOT EXISTS engine_audit_issue_unique_idx ON engine_audit(issue_number);
         CREATE INDEX IF NOT EXISTS idx_draw_history_created ON draw_history(created_at DESC);
         """
         logger.info("Ensuring database tables exist...")
