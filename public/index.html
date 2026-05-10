@@ -294,7 +294,6 @@
                 }
 
                 document.getElementById('live-conf').innerText = (pred.confidence * 100).toFixed(1) + "%";
-                document.getElementById('live-uncert').innerText = pred.uncertainty;
                 document.getElementById('val-regime').innerText = pred.regime || "NORMAL";
                 document.getElementById('val-entropy').innerText = pred.entropy || "0.00";
                 document.getElementById('val-volatility').innerText = pred.volatility || "0.00";
