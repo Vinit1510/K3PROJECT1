@@ -131,8 +131,8 @@
                     <div class="target-panel" style="text-align:left; padding-left: 2rem;">
                         <div class="card-label">CONFIDENCE INDEX</div>
                         <div id="live-conf" style="font-size:2rem; font-weight:bold;">0.0%</div>
-                        <div class="card-label" style="margin-top:1rem;">UNCERTAINTY</div>
-                        <div id="live-uncert" style="font-size:1.2rem; color:#f39c12">0.0</div>
+                        <div class="card-label" style="margin-top:1rem;">OVERALL ACCURACY</div>
+                        <div id="win-rate-stat" style="font-size:1.5rem; color:#10b981; font-weight:800;">--%</div>
                     </div>
                 </div>
 
@@ -198,9 +198,19 @@
                     <p style="color:var(--text-muted)">Historical accuracy verification reports will populate here, reflecting comprehensive backend performance summaries.</p>
                 </div>
                 <div class="table-container">
-                     <p style="text-align:center; padding: 5rem; color:var(--text-muted); border: 2px dashed var(--border-clr); border-radius:8px;">
-                        Detailed Ledger Engine Offline. (Integration Coming Soon)
-                     </p>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>PERIOD #</th>
+                                <th>ENGINE CALL</th>
+                                <th>FINAL RESULT</th>
+                                <th>ACCURACY AUDIT</th>
+                            </tr>
+                        </thead>
+                        <tbody id="audit-table-body">
+                            <!-- Populated by dynamic JS -->
+                        </tbody>
+                    </table>
                 </div>
             </section>
 
@@ -212,11 +222,11 @@
                 <div class="metrics-grid">
                      <div class="glass-card">
                          <div class="card-label">OVERALL WIN RATE</div>
-                         <div class="card-value" style="color:var(--accent-text)">N/A</div>
+                         <div id="stat-winrate" class="card-value" style="color:var(--accent-text)">N/A</div>
                      </div>
                      <div class="glass-card">
-                         <div class="card-label">SAMPLE SIZE</div>
-                         <div class="card-value">0</div>
+                         <div class="card-label">VALIDATED SAMPLE</div>
+                         <div id="stat-sample" class="card-value">0</div>
                      </div>
                 </div>
                 <p style="text-align:center; margin-top: 3rem; color:var(--text-muted)">Quantitative charting library initialized. Standing by for feed inputs.</p>
@@ -314,28 +324,40 @@
                     tbody.appendChild(pendingTr);
                 }
                 
-                // 2. Populate Historicals
+                // 2. Populate Historicals & Calculate Stats
+                let wins = 0;
+                let totalValid = 0;
+                const auditTbody = document.getElementById('audit-table-body');
+                if (auditTbody) auditTbody.innerHTML = "";
+
                 history.forEach(row => {
                     const tr = document.createElement('tr');
                     const isBig = row.big_small === 'BIG';
                     
-                    // Logic for Prediction Cross Referencing
                     let predCallStr = "---";
                     if (row.predicted_bigsmall) {
                          predCallStr = row.predicted_bigsmall + (row.predicted_parity ? " / " + row.predicted_parity : "");
                     }
                     
                     let auditBadge = '<span style="color:var(--text-muted)">PENDING</span>';
+                    let rawAuditText = "PENDING";
+                    
                     if (row.audit_skipped) {
-                        auditBadge = '<span style="color:#ffaa00; font-size:0.75rem">SKIPPED</span>';
+                        auditBadge = '<span class="badge-tag" style="background:#fff7ed; color:#c2410c;">SKIPPED</span>';
                         predCallStr = "SKIP";
+                        rawAuditText = "SKIPPED";
                     } else if (row.predicted_bigsmall) {
                         const isCorrect = (row.predicted_bigsmall === row.big_small);
+                        totalValid++;
+                        if (isCorrect) wins++;
+                        
                         auditBadge = isCorrect 
                             ? '<span class="badge-tag bg-green">✓ WIN</span>' 
                             : '<span class="badge-tag bg-red">✘ LOSS</span>';
+                        rawAuditText = isCorrect ? "SUCCESS" : "FAILED";
                     }
 
+                    // Main Row HTML
                     tr.innerHTML = `
                         <td style="color:var(--text-muted)">${row.issue_number}</td>
                         <td style="letter-spacing:3px; font-weight:bold; color:#4b5563">${row.dice_1},${row.dice_2},${row.dice_3}</td>
@@ -348,7 +370,29 @@
                         <td>${auditBadge}</td>
                     `;
                     tbody.appendChild(tr);
+
+                    // Populating the Dedicated Audit Trail View 
+                    if (auditTbody) {
+                        const aTr = document.createElement('tr');
+                        aTr.innerHTML = `
+                            <td><strong>${row.issue_number}</strong></td>
+                            <td style="color:var(--secondary-text);">${predCallStr}</td>
+                            <td>${row.big_small} / ${row.parity}</td>
+                            <td>${auditBadge}</td>
+                        `;
+                        auditTbody.appendChild(aTr);
+                    }
                 });
+
+                // Finalize Statistical Math
+                const winRate = totalValid > 0 ? ((wins / totalValid) * 100).toFixed(1) : "0.0";
+                document.getElementById('win-rate-stat').innerText = winRate + "%";
+                
+                // Update dedicated Stats Tab
+                const statWr = document.getElementById('stat-winrate');
+                const statSample = document.getElementById('stat-sample');
+                if (statWr) statWr.innerText = winRate + "%";
+                if (statSample) statSample.innerText = totalValid + " Audited Rounds";
 
             } catch (e) {
                 console.warn("Stream heartbeat sync failed. Retrying...");

@@ -23,6 +23,16 @@ class QuantumEngine:
         self.min_confidence_threshold = 0.6
         self.max_uncertainty_threshold = 0.4
 
+    def _sanitize_float(self, val):
+        import math
+        try:
+            v = float(val)
+            if math.isnan(v) or math.isinf(v):
+                return 0.0
+            return v
+        except:
+            return 0.0
+
     async def get_latest_history(self, limit=100):
         query = """
             SELECT d.*, 
@@ -147,15 +157,18 @@ class QuantumEngine:
                 ON CONFLICT (issue_number) DO UPDATE SET
                     predicted_bigsmall = EXCLUDED.predicted_bigsmall,
                     predicted_parity = EXCLUDED.predicted_parity,
-                    confidence = EXCLUDED.confidence;
+                    confidence = EXCLUDED.confidence,
+                    uncertainty = EXCLUDED.uncertainty,
+                    entropy = EXCLUDED.entropy,
+                    is_skipped = EXCLUDED.is_skipped;
                 """
                 await db.execute(query, (
-                    res["issue_number"],
+                    str(res["issue_number"]).strip(),
                     res["prediction_bs"],
                     res["prediction_parity"],
-                    res["confidence"],
-                    res["uncertainty"],
-                    res["entropy"],
+                    self._sanitize_float(res["confidence"]),
+                    self._sanitize_float(res["uncertainty"]),
+                    self._sanitize_float(res["entropy"]),
                     res["is_skipped"]
                 ))
         except Exception as e:
@@ -206,12 +219,12 @@ class QuantumEngine:
                 ON CONFLICT (issue_number) DO NOTHING
                 """
                 await db.execute(save_query, (
-                    missing_issue, # Store directly under original missing issue identifier
+                    str(missing_issue).strip(), # Store directly under original missing issue identifier
                     proj["prediction_bs"],
                     proj["prediction_parity"],
-                    proj["confidence"],
-                    proj["uncertainty"],
-                    proj["entropy"],
+                    self._sanitize_float(proj["confidence"]),
+                    self._sanitize_float(proj["uncertainty"]),
+                    self._sanitize_float(proj["entropy"]),
                     proj["is_skipped"]
                 ))
                 count += 1
