@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>K3 Quantum Adaptive Engine</title>
+    <style>
+        :root {
+            --bg-dark: #f0f2f5;
+            --panel-bg: #ffffff;
+            --accent-glow: rgba(16, 185, 129, 0.15);
+            --accent-text: #10b981;
+            --secondary-text: #3b82f6;
+            --secondary-glow: rgba(59, 130, 246, 0.15);
+            --danger: #ef4444;
+            --danger-glow: rgba(239, 68, 68, 0.15);
+            --text-main: #1f2937;
+            --text-muted: #6b7280;
+            --border-clr: #e5e7eb;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: var(--bg-dark); color: var(--text-main); font-family: 'Inter', system-ui, sans-serif; line-height: 1.5; overflow-x: hidden; }
+        .dashboard-wrapper { display: grid; grid-template-columns: 260px 1fr; min-height: 100vh; }
+        aside { background: #ffffff; border-right: 1px solid var(--border-clr); padding: 2rem 1.5rem; display: flex; flex-direction: column; gap: 2rem; box-shadow: 2px 0 8px rgba(0,0,0,0.02); }
+        .logo-area h1 { font-size: 1.2rem; letter-spacing: 1px; color: var(--accent-text); font-weight:800; }
+        .status-badge { font-size: 0.7rem; background: #ecfdf5; color: #059669; padding: 0.2rem 0.5rem; border-radius: 4px; display: inline-block; margin-top: 0.5rem; font-weight:bold; }
+        .nav-links { list-style: none; display: flex; flex-direction: column; gap: 0.5rem; }
+        .nav-links li { padding: 0.75rem 1rem; cursor: pointer; border-radius: 6px; font-size: 0.9rem; color: var(--text-muted); font-weight: 500; transition:all 0.2s; }
+        .nav-links li:hover { background: #f3f4f6; color: var(--text-main); }
+        .nav-links li.active { background: #eff6ff; color: var(--secondary-text); border-left: 3px solid var(--secondary-text); }
+        main { padding: 2rem; overflow-y: auto; }
+        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; border-bottom: 1px solid var(--border-clr); padding-bottom: 1rem; }
+        
+        /* Countdown Clock */
+        .countdown-box {
+            background: #ffffff;
+            border: 1px solid var(--border-clr);
+            border-radius: 8px;
+            padding: 0.5rem 1rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        #timer-val {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #f97316;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+        .glass-card { background: var(--panel-bg); border: 1px solid var(--border-clr); border-radius: 12px; padding: 1.5rem; position: relative; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+        .glass-card::before { content: ""; position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: var(--secondary-text); opacity: 0.8; border-radius: 4px 0 0 4px; }
+        .card-label { font-size: 0.8rem; text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.5rem; font-weight:600; }
+        .card-value { font-size: 1.8rem; font-weight: 700; color: var(--text-main); }
+
+        /* Signal Board Refactor */
+        .signal-display {
+            background: linear-gradient(135deg, #ffffff, #f8fafc);
+            border: 1px solid var(--border-clr);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 2rem;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+        }
+        
+        .target-panel { text-align: center; border-right: 1px solid var(--border-clr); }
+        .target-panel:last-child { border-right: none; }
+        .target-title { font-size: 0.75rem; color: var(--text-muted); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 1rem; font-weight:700;}
+        .signal-text { font-size: 3rem; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; }
+        
+        .text-bs { color: #059669; }
+        .text-par { color: #2563eb; }
+
+        .table-container { background: var(--panel-bg); border-radius: 12px; padding: 1.5rem; border: 1px solid var(--border-clr); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
+        table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        th { text-align: left; color: var(--text-muted); padding-bottom: 1rem; border-bottom: 1px solid var(--border-clr); font-weight:600; }
+        td { padding: 1rem 0; border-bottom: 1px solid #f3f4f6; }
+        .badge-tag { padding: 6px 12px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.5px; }
+        .bg-green { background: #ecfdf5; color: #047857; }
+        .bg-red { background: #fef2f2; color: #b91c1c; }
+        
+        @keyframes pulse { 0%, 100% { opacity: 0.7; } 50% { opacity: 1; } }
+        .pulsing { animation: pulse 1.5s infinite; }
+    </style>
+</head>
+<body>
+    <div class="dashboard-wrapper">
+        <aside>
+            <div class="logo-area">
+                <h1>QUANTUM.K3</h1>
+                <div class="status-badge">● ENGINE_ONLINE</div>
+            </div>
+            <ul class="nav-links">
+                <li id="link-dashboard" class="nav-item active" onclick="switchView('dashboard')">DASHBOARD</li>
+                <li id="link-audit" class="nav-item" onclick="switchView('audit')">AUDIT TRAIL</li>
+                <li id="link-stats" class="nav-item" onclick="switchView('stats')">STATS ANALYSIS</li>
+            </ul>
+        </aside>
+
+        <main>
+            <!-- VIEW: DASHBOARD -->
+            <section id="view-dashboard" class="page-view">
+                <div class="top-bar">
+                    <div>
+                        <h2>NEXT PERIOD: <span id="target-issue" style="color:var(--text-main); font-weight:800; margin-left:10px">LOADING...</span></h2>
+                    </div>
+                    <div class="countdown-box">
+                        <span style="font-size: 0.8rem; color:var(--text-muted)">NEXT ROUND IN</span>
+                        <div id="timer-val">00:00</div>
+                    </div>
+                </div>
+
+                <!-- MULTI SIGNAL BOARD -->
+                <div class="signal-display" id="signal-board">
+                    <div class="target-panel">
+                        <div class="target-title">SIZE SIGNAL</div>
+                        <div id="sig-bs" class="signal-text text-bs pulsing">CALC</div>
+                    </div>
+                    
+                    <div class="target-panel">
+                        <div class="target-title">PARITY SIGNAL</div>
+                        <div id="sig-parity" class="signal-text text-par pulsing">CALC</div>
+                    </div>
+
+                    <div class="target-panel" style="text-align:left; padding-left: 2rem;">
+                        <div class="card-label">CONFIDENCE INDEX</div>
+                        <div id="live-conf" style="font-size:2rem; font-weight:bold;">0.0%</div>
+                        <div class="card-label" style="margin-top:1rem;">UNCERTAINTY</div>
+                        <div id="live-uncert" style="font-size:1.2rem; color:#f39c12">0.0</div>
+                    </div>
+                </div>
+
+                <!-- METRICS -->
+                <div class="metrics-grid">
+                    <div class="glass-card">
+                        <div class="card-label">MARKET REGIME</div>
+                        <div class="card-value" id="val-regime" style="color:#a8b2d1">SYNCING</div>
+                    </div>
+                    <div class="glass-card">
+                        <div class="card-label">ENTROPY</div>
+                        <div class="card-value" id="val-entropy">--</div>
+                    </div>
+                    <div class="glass-card">
+                        <div class="card-label">VOLATILITY</div>
+                        <div class="card-value" id="val-volatility">--</div>
+                    </div>
+                </div>
+
+                <!-- LIVE FEED -->
+                <div class="table-container">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1.5rem; border-bottom:1px solid var(--border-clr); padding-bottom:1rem;">
+                        <div style="font-weight: 800; color:var(--text-main); display:flex; align-items:center; gap:8px;">
+                            <div style="width:8px; height:8px; background:var(--accent-text); border-radius:50%;"></div>
+                            LIVE HISTORICAL FEED
+                        </div>
+                        
+                        <!-- ADMIN ACTIONS -->
+                        <div style="display:flex; gap: 10px;">
+                            <button onclick="triggerExcelDownload()" style="background:#ffffff; border:1px solid var(--border-clr); color:#374151; padding: 8px 14px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; cursor:pointer; display:flex; align-items:center; gap:5px; box-shadow:0 1px 2px rgba(0,0,0,0.05); transition: all 0.2s;">
+                                📥 DOWNLOAD EXCEL
+                            </button>
+                            <button onclick="requestDataClear()" style="background:#fef2f2; border:1px solid #fee2e2; color:#b91c1c; padding: 8px 14px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; cursor:pointer; transition: all 0.2s;">
+                                🗑️ CLEAR DATA
+                            </button>
+                        </div>
+                    </div>
+
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>PERIOD #</th>
+                                <th>RAW DICE</th>
+                                <th>SUM</th>
+                                <th>SYSTEM CALL</th>
+                                <th>ACTUAL</th>
+                                <th>AUDIT</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-table-body">
+                            <tr><td colspan="6" style="text-align:center; padding:3rem; color:var(--text-muted);">Initializing feed...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- VIEW: AUDIT TRAIL -->
+            <section id="view-audit" class="page-view" style="display:none;">
+                <div class="top-bar">
+                    <h2>AUDIT LOG ARCHIVE</h2>
+                </div>
+                <div class="glass-card" style="margin-bottom:2rem;">
+                    <p style="color:var(--text-muted)">Historical accuracy verification reports will populate here, reflecting comprehensive backend performance summaries.</p>
+                </div>
+                <div class="table-container">
+                     <p style="text-align:center; padding: 5rem; color:var(--text-muted); border: 2px dashed var(--border-clr); border-radius:8px;">
+                        Detailed Ledger Engine Offline. (Integration Coming Soon)
+                     </p>
+                </div>
+            </section>
+
+            <!-- VIEW: STATS -->
+            <section id="view-stats" class="page-view" style="display:none;">
+                <div class="top-bar">
+                    <h2>STATISTICAL ANALYSIS</h2>
+                </div>
+                <div class="metrics-grid">
+                     <div class="glass-card">
+                         <div class="card-label">OVERALL WIN RATE</div>
+                         <div class="card-value" style="color:var(--accent-text)">N/A</div>
+                     </div>
+                     <div class="glass-card">
+                         <div class="card-label">SAMPLE SIZE</div>
+                         <div class="card-value">0</div>
+                     </div>
+                </div>
+                <p style="text-align:center; margin-top: 3rem; color:var(--text-muted)">Quantitative charting library initialized. Standing by for feed inputs.</p>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        // Sidebar Navigation Controller
+        function switchView(viewName) {
+            // 1. Toggle the CSS classes on nav links
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            document.getElementById('link-' + viewName).classList.add('active');
+
+            // 2. Toggle the view container visibility
+            document.querySelectorAll('.page-view').forEach(el => el.style.display = 'none');
+            document.getElementById('view-' + viewName).style.display = 'block';
+        }
+
+        // Synchronized 1-minute countdown (loops on local time mod 60)
+        function updateCountdown() {
+            const now = new Date();
+            // Time remaining to next local minute interval
+            const secondsPassed = now.getSeconds();
+            const secondsRemaining = 60 - secondsPassed;
+            
+            const timerEl = document.getElementById('timer-val');
+            timerEl.innerText = "00:" + String(secondsRemaining).padStart(2, '0');
+            
+            // High priority refresh near end of round or exact minute transition
+            if (secondsRemaining === 59 || secondsRemaining === 2) {
+                 updateDashboard();
+            }
+        }
+
+        async function updateDashboard() {
+            try {
+                const [predRes, histRes] = await Promise.all([
+                    fetch('/api/current_prediction'),
+                    fetch('/api/history')
+                ]);
+
+                const pred = await predRes.json();
+                const history = await histRes.json();
+
+                // Update Period header
+                document.getElementById('target-issue').innerText = pred.issue_number || "PENDING";
+
+                const sigBS = document.getElementById('sig-bs');
+                const sigPar = document.getElementById('sig-parity');
+
+                if (pred.is_skipped) {
+                    sigBS.innerText = "SKIP";
+                    sigBS.style.color = "var(--danger)";
+                    sigPar.innerText = "SKIP";
+                    sigPar.style.color = "var(--danger)";
+                } else {
+                    sigBS.innerText = pred.prediction_bs || "NO SIGNAL";
+                    sigBS.style.color = "var(--accent-text)";
+                    sigPar.innerText = pred.prediction_parity || "NO SIGNAL";
+                    sigPar.style.color = "var(--secondary-text)";
+                    
+                    // Apply smaller font if long text
+                    sigPar.style.fontSize = (pred.prediction_parity) ? "3rem" : "1.5rem";
+                }
+
+                document.getElementById('live-conf').innerText = (pred.confidence * 100).toFixed(1) + "%";
+                document.getElementById('live-uncert').innerText = pred.uncertainty;
+                document.getElementById('val-regime').innerText = pred.regime || "NORMAL";
+                document.getElementById('val-entropy').innerText = pred.entropy || "0.00";
+                document.getElementById('val-volatility').innerText = pred.volatility || "0.00";
+
+                // Populate Table
+                const tbody = document.getElementById('history-table-body');
+                tbody.innerHTML = "";
+                
+                // 1. INJECT PENDING/UPCOMING ROUND ROW (Top placement)
+                if (pred.issue_number && pred.issue_number !== "PENDING") {
+                    const pendingTr = document.createElement('tr');
+                    pendingTr.style.background = "#fefce8"; // Soft pastel yellow highlight
+                    
+                    let upcomingCall = "SKIP";
+                    if (!pred.is_skipped) {
+                        upcomingCall = (pred.prediction_bs || "") + " / " + (pred.prediction_parity || "WAIT");
+                    }
+
+                    pendingTr.innerHTML = `
+                        <td style="color:#b45309; font-weight:bold;">${pred.issue_number} <span style="font-size:0.6rem; color:#b45309; background:#fef08a; padding:4px 6px; border-radius:4px; margin-left:5px;">LIVE</span></td>
+                        <td style="letter-spacing:3px; font-weight:bold; color:var(--text-muted)">?, ?, ?</td>
+                        <td style="font-weight:bold; color:var(--text-muted)">?</td>
+                        <td style="font-weight:bold; color:#059669; font-size:0.8rem;" class="pulsing">${upcomingCall}</td>
+                        <td><span style="color:var(--text-muted); font-style:italic; font-size:0.8rem;">Awaiting arrival...</span></td>
+                        <td><span style="color:#d97706; font-size:0.7rem; font-weight:bold; border:1px solid #fde68a; padding:2px 4px; border-radius:3px; background:#fff;">ANALYZING</span></td>
+                    `;
+                    tbody.appendChild(pendingTr);
+                }
+                
+                // 2. Populate Historicals
+                history.forEach(row => {
+                    const tr = document.createElement('tr');
+                    const isBig = row.big_small === 'BIG';
+                    
+                    // Logic for Prediction Cross Referencing
+                    let predCallStr = "---";
+                    if (row.predicted_bigsmall) {
+                         predCallStr = row.predicted_bigsmall + (row.predicted_parity ? " / " + row.predicted_parity : "");
+                    }
+                    
+                    let auditBadge = '<span style="color:var(--text-muted)">PENDING</span>';
+                    if (row.audit_skipped) {
+                        auditBadge = '<span style="color:#ffaa00; font-size:0.75rem">SKIPPED</span>';
+                        predCallStr = "SKIP";
+                    } else if (row.predicted_bigsmall) {
+                        const isCorrect = (row.predicted_bigsmall === row.big_small);
+                        auditBadge = isCorrect 
+                            ? '<span class="badge-tag bg-green">✓ WIN</span>' 
+                            : '<span class="badge-tag bg-red">✘ LOSS</span>';
+                    }
+
+                    tr.innerHTML = `
+                        <td style="color:var(--text-muted)">${row.issue_number}</td>
+                        <td style="letter-spacing:3px; font-weight:bold; color:#4b5563">${row.dice_1},${row.dice_2},${row.dice_3}</td>
+                        <td style="font-weight:bold; color:#111827;">${row.dice_sum}</td>
+                        <td style="font-weight:bold; color:var(--secondary-text); font-size:0.8rem;">${predCallStr}</td>
+                        <td>
+                            <span class="badge-tag ${isBig ? 'bg-green' : 'bg-red'}">${row.big_small}</span>
+                            <span class="badge-tag" style="background:#f3f4f6; color:#374151;">${row.parity}</span>
+                        </td>
+                        <td>${auditBadge}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+
+            } catch (e) {
+                console.warn("Stream heartbeat sync failed. Retrying...");
+            }
+        }
+
+        async function requestDataClear() {
+            if (confirm("⚠️ WARNING: This will instantly delete ALL historical records and audit trails from your database permanently. Are you absolutely sure you wish to reset everything?")) {
+                try {
+                    const response = await fetch('/api/clear_data', { method: 'POST' });
+                    const result = await response.json();
+                    if (result.status === 'success') {
+                        alert("🚀 System registries sanitized successfully.");
+                        updateDashboard(); // Refresh UI immediately
+                    } else {
+                        alert("Error: " + result.message);
+                    }
+                } catch (e) {
+                    console.error("Network failure during purge", e);
+                }
+            }
+        }
+
+        function triggerExcelDownload() {
+            // Simply point location to endpoint to spark native browser download download
+            window.location.href = "/api/download_excel";
+        }
+
+        // Update UI state every 1 second for timer
+        setInterval(updateCountdown, 1000);
+        
+        // Independent API poll every 10 seconds just in case
+        setInterval(updateDashboard, 10000);
+        
+        // Initial fire
+        updateCountdown();
+        setTimeout(updateDashboard, 500);
+    </script>
+</body>
+</html>

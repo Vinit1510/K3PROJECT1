@@ -1,0 +1,19 @@
+# Python Virtual Environments
+venv/
+env/
+.env
+__pycache__/
+*.py[cod]
+*$py.class
+
+# OS specific
+.DS_Store
+Thumbs.db
+
+# Local IDE config
+.vscode/
+.idea/
+
+# Database (if any local test sqlites accidentally made)
+*.sqlite3
+*.db
