@@ -71,8 +71,8 @@ class SyncWorker:
                     # Periodically heal any small missed gaps retroactively
                     await engine.backfill_missing_audits(max_rows=5)
                 
-                # Optimal polling for 1M interval is around 15-30s
-                await asyncio.sleep(15)
+                # Tightened polling to 5s for hyper-responsive sync
+                await asyncio.sleep(5)
             except asyncio.CancelledError:
                 break
             except Exception as e:

@@ -131,8 +131,17 @@
                     <div class="target-panel" style="text-align:left; padding-left: 2rem;">
                         <div class="card-label">CONFIDENCE INDEX</div>
                         <div id="live-conf" style="font-size:2rem; font-weight:bold;">0.0%</div>
-                        <div class="card-label" style="margin-top:1rem;">OVERALL ACCURACY</div>
-                        <div id="win-rate-stat" style="font-size:1.5rem; color:#10b981; font-weight:800;">--%</div>
+                        <div class="card-label" style="margin-top:1rem;">ENGINE ACCURACY</div>
+                        <div style="display:flex; gap: 15px; margin-top:5px;">
+                            <div>
+                                <div style="font-size:0.6rem; color:var(--text-muted); text-transform:uppercase; font-weight:800;">SIZE</div>
+                                <div id="wr-size" style="font-size:1.5rem; color:#10b981; font-weight:800;">--%</div>
+                            </div>
+                            <div style="border-left: 1px solid var(--border-clr); padding-left:15px;">
+                                <div style="font-size:0.6rem; color:var(--text-muted); text-transform:uppercase; font-weight:800;">PARITY</div>
+                                <div id="wr-parity" style="font-size:1.5rem; color:#3b82f6; font-weight:800;">--%</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -323,9 +332,10 @@
                     tbody.appendChild(pendingTr);
                 }
                 
-                // 2. Populate Historicals & Calculate Stats
-                let wins = 0;
-                let totalValid = 0;
+                // 2. Populate Historicals & Calculate Stats (Split Mode)
+                let winsSize = 0, totalSize = 0;
+                let winsParity = 0, totalParity = 0;
+                
                 const auditTbody = document.getElementById('audit-table-body');
                 if (auditTbody) auditTbody.innerHTML = "";
 
@@ -334,27 +344,35 @@
                     const isBig = row.big_small === 'BIG';
                     
                     let predCallStr = "---";
-                    if (row.predicted_bigsmall) {
-                         predCallStr = row.predicted_bigsmall + (row.predicted_parity ? " / " + row.predicted_parity : "");
+                    if (row.predicted_bigsmall || row.predicted_parity) {
+                         predCallStr = (row.predicted_bigsmall || "NO SIG") + " / " + (row.predicted_parity || "NO SIG");
                     }
                     
-                    let auditBadge = '<span style="color:var(--text-muted)">PENDING</span>';
-                    let rawAuditText = "PENDING";
-                    
+                    let auditBadgeBS = '<span style="color:var(--text-muted); font-size:0.7rem;">--</span>';
+                    let auditBadgeParity = '<span style="color:var(--text-muted); font-size:0.7rem;">--</span>';
+
                     if (row.audit_skipped) {
-                        auditBadge = '<span class="badge-tag" style="background:#fff7ed; color:#c2410c;">SKIPPED</span>';
+                        auditBadgeBS = '<span class="badge-tag" style="background:#fff7ed; color:#c2410c; padding:2px 6px; font-size:0.65rem;">SKIPPED</span>';
+                        auditBadgeParity = auditBadgeBS;
                         predCallStr = "SKIP";
-                        rawAuditText = "SKIPPED";
-                    } else if (row.predicted_bigsmall) {
-                        const isCorrect = (row.predicted_bigsmall === row.big_small);
-                        totalValid++;
-                        if (isCorrect) wins++;
-                        
-                        auditBadge = isCorrect 
-                            ? '<span class="badge-tag bg-green">✓ WIN</span>' 
-                            : '<span class="badge-tag bg-red">✘ LOSS</span>';
-                        rawAuditText = isCorrect ? "SUCCESS" : "FAILED";
+                    } else {
+                        // 1. Size Audit
+                        if (row.predicted_bigsmall) {
+                            totalSize++;
+                            const isCorrectBS = (row.predicted_bigsmall === row.big_small);
+                            if (isCorrectBS) winsSize++;
+                            auditBadgeBS = `<span class="badge-tag ${isCorrectBS ? 'bg-green' : 'bg-red'}" style="padding:2px 6px; font-size:0.65rem;">S:${isCorrectBS ? '✓' : '✘'}</span>`;
+                        }
+                        // 2. Parity Audit
+                        if (row.predicted_parity) {
+                            totalParity++;
+                            const isCorrectPar = (row.predicted_parity === row.parity);
+                            if (isCorrectPar) winsParity++;
+                            auditBadgeParity = `<span class="badge-tag ${isCorrectPar ? 'bg-green' : 'bg-red'}" style="padding:2px 6px; font-size:0.65rem;">P:${isCorrectPar ? '✓' : '✘'}</span>`;
+                        }
                     }
+
+                    const finalAuditHTML = `<div style="display:flex; gap:5px;">${auditBadgeBS} ${auditBadgeParity}</div>`;
 
                     // Main Row HTML
                     tr.innerHTML = `
@@ -366,7 +384,7 @@
                             <span class="badge-tag ${isBig ? 'bg-green' : 'bg-red'}">${row.big_small}</span>
                             <span class="badge-tag" style="background:#f3f4f6; color:#374151;">${row.parity}</span>
                         </td>
-                        <td>${auditBadge}</td>
+                        <td>${finalAuditHTML}</td>
                     `;
                     tbody.appendChild(tr);
 
@@ -377,21 +395,24 @@
                             <td><strong>${row.issue_number}</strong></td>
                             <td style="color:var(--secondary-text);">${predCallStr}</td>
                             <td>${row.big_small} / ${row.parity}</td>
-                            <td>${auditBadge}</td>
+                            <td>${finalAuditHTML}</td>
                         `;
                         auditTbody.appendChild(aTr);
                     }
                 });
 
                 // Finalize Statistical Math
-                const winRate = totalValid > 0 ? ((wins / totalValid) * 100).toFixed(1) : "0.0";
-                document.getElementById('win-rate-stat').innerText = winRate + "%";
+                const sizeRate = totalSize > 0 ? ((winsSize / totalSize) * 100).toFixed(1) : "0.0";
+                const parityRate = totalParity > 0 ? ((winsParity / totalParity) * 100).toFixed(1) : "0.0";
+                
+                document.getElementById('wr-size').innerText = sizeRate + "%";
+                document.getElementById('wr-parity').innerText = parityRate + "%";
                 
                 // Update dedicated Stats Tab
                 const statWr = document.getElementById('stat-winrate');
                 const statSample = document.getElementById('stat-sample');
-                if (statWr) statWr.innerText = winRate + "%";
-                if (statSample) statSample.innerText = totalValid + " Audited Rounds";
+                if (statWr) statWr.innerText = sizeRate + "% | " + parityRate + "%";
+                if (statSample) statSample.innerText = `Size: ${totalSize} | Parity: ${totalParity}`;
 
             } catch (e) {
                 console.warn("Stream heartbeat sync failed. Retrying...");
@@ -423,8 +444,8 @@
         // Update UI state every 1 second for timer
         setInterval(updateCountdown, 1000);
         
-        // Independent API poll every 10 seconds just in case
-        setInterval(updateDashboard, 10000);
+        // Independent API poll every 3 seconds for instant refresh response
+        setInterval(updateDashboard, 3000);
         
         // Initial fire
         updateCountdown();

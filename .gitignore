@@ -17,3 +17,7 @@ Thumbs.db
 # Database (if any local test sqlites accidentally made)
 *.sqlite3
 *.db
+
+# Temp and local helper scripts
+*.har
+*.bat
