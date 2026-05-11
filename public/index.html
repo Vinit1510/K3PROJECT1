@@ -101,6 +101,20 @@
                 <li id="link-audit" class="nav-item" onclick="switchView('audit')">AUDIT TRAIL</li>
                 <li id="link-stats" class="nav-item" onclick="switchView('stats')">STATS ANALYSIS</li>
             </ul>
+            
+            <div style="margin-top:auto; padding: 1rem; background:#f8fafc; border: 1px solid var(--border-clr); border-radius:10px;">
+                <div style="font-size:0.65rem; color:var(--text-muted); font-weight:800; letter-spacing:0.5px; margin-bottom:10px; text-transform:uppercase;">L10 RECENT HEAT</div>
+                <div style="display:flex; flex-direction:column; gap:12px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span style="font-size:0.75rem; font-weight:600; color:#4b5563;">SIZE</span>
+                        <span id="heat-size" style="font-size:0.9rem; font-weight:800; color:#059669; background:#ecfdf5; padding:2px 8px; border-radius:4px;">--%</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span style="font-size:0.75rem; font-weight:600; color:#4b5563;">PARITY</span>
+                        <span id="heat-parity" style="font-size:0.9rem; font-weight:800; color:#2563eb; background:#eff6ff; padding:2px 8px; border-radius:4px;">--%</span>
+                    </div>
+                </div>
+            </div>
         </aside>
 
         <main>
@@ -131,7 +145,7 @@
                     <div class="target-panel" style="text-align:left; padding-left: 2rem;">
                         <div class="card-label">CONFIDENCE INDEX</div>
                         <div id="live-conf" style="font-size:2rem; font-weight:bold;">0.0%</div>
-                        <div class="card-label" style="margin-top:1rem;">ENGINE ACCURACY</div>
+                        <div class="card-label" style="margin-top:1rem;">OVERALL ACCURACY</div>
                         <div style="display:flex; gap: 15px; margin-top:5px;">
                             <div>
                                 <div style="font-size:0.6rem; color:var(--text-muted); text-transform:uppercase; font-weight:800;">SIZE</div>
@@ -273,13 +287,15 @@
 
         async function updateDashboard() {
             try {
-                const [predRes, histRes] = await Promise.all([
+                const [predRes, histRes, statsRes] = await Promise.all([
                     fetch('/api/current_prediction'),
-                    fetch('/api/history')
+                    fetch('/api/history?limit=50'),
+                    fetch('/api/stats')
                 ]);
 
                 const pred = await predRes.json();
                 const history = await histRes.json();
+                const globalStats = await statsRes.json();
 
                 // Update Period header
                 document.getElementById('target-issue').innerText = pred.issue_number || "PENDING";
@@ -333,8 +349,9 @@
                 }
                 
                 // 2. Populate Historicals & Calculate Stats (Split Mode)
-                let winsSize = 0, totalSize = 0;
-                let winsParity = 0, totalParity = 0;
+                // 2. Populate Historicals & Calculate Local Recency
+                let winsSizeRec = 0, totalSizeRec = 0;
+                let winsParityRec = 0, totalParityRec = 0;
                 
                 const auditTbody = document.getElementById('audit-table-body');
                 if (auditTbody) auditTbody.innerHTML = "";
@@ -358,16 +375,20 @@
                     } else {
                         // 1. Size Audit
                         if (row.predicted_bigsmall) {
-                            totalSize++;
                             const isCorrectBS = (row.predicted_bigsmall === row.big_small);
-                            if (isCorrectBS) winsSize++;
+                            if (totalSizeRec < 10) {
+                                totalSizeRec++;
+                                if (isCorrectBS) winsSizeRec++;
+                            }
                             auditBadgeBS = `<span class="badge-tag ${isCorrectBS ? 'bg-green' : 'bg-red'}" style="padding:2px 6px; font-size:0.65rem;">S:${isCorrectBS ? '✓' : '✘'}</span>`;
                         }
                         // 2. Parity Audit
                         if (row.predicted_parity) {
-                            totalParity++;
                             const isCorrectPar = (row.predicted_parity === row.parity);
-                            if (isCorrectPar) winsParity++;
+                            if (totalParityRec < 10) {
+                                totalParityRec++;
+                                if (isCorrectPar) winsParityRec++;
+                            }
                             auditBadgeParity = `<span class="badge-tag ${isCorrectPar ? 'bg-green' : 'bg-red'}" style="padding:2px 6px; font-size:0.65rem;">P:${isCorrectPar ? '✓' : '✘'}</span>`;
                         }
                     }
@@ -401,18 +422,26 @@
                     }
                 });
 
-                // Finalize Statistical Math
-                const sizeRate = totalSize > 0 ? ((winsSize / totalSize) * 100).toFixed(1) : "0.0";
-                const parityRate = totalParity > 0 ? ((winsParity / totalParity) * 100).toFixed(1) : "0.0";
+                // Calculate Stats from both tiers
+                const recSizeRate = totalSizeRec > 0 ? ((winsSizeRec / totalSizeRec) * 100).toFixed(0) : "--";
+                const recParityRate = totalParityRec > 0 ? ((winsParityRec / totalParityRec) * 100).toFixed(0) : "--";
                 
-                document.getElementById('wr-size').innerText = sizeRate + "%";
-                document.getElementById('wr-parity').innerText = parityRate + "%";
+                const globSizeRate = globalStats.total_size > 0 ? ((globalStats.wins_size / globalStats.total_size) * 100).toFixed(1) : "0.0";
+                const globParityRate = globalStats.total_parity > 0 ? ((globalStats.wins_parity / globalStats.total_parity) * 100).toFixed(1) : "0.0";
+
+                // 1. Wire the Side Bar Heat Meter (Recent 10)
+                document.getElementById('heat-size').innerText = recSizeRate + "%";
+                document.getElementById('heat-parity').innerText = recParityRate + "%";
                 
-                // Update dedicated Stats Tab
+                // 2. Wire Global Metrics to Dashboard Header
+                document.getElementById('wr-size').innerText = globSizeRate + "%";
+                document.getElementById('wr-parity').innerText = globParityRate + "%";
+                
+                // 3. Wire detailed tracking analysis tab
                 const statWr = document.getElementById('stat-winrate');
                 const statSample = document.getElementById('stat-sample');
-                if (statWr) statWr.innerText = sizeRate + "% | " + parityRate + "%";
-                if (statSample) statSample.innerText = `Size: ${totalSize} | Parity: ${totalParity}`;
+                if (statWr) statWr.innerText = globSizeRate + "% | " + globParityRate + "%";
+                if (statSample) statSample.innerText = `Samples -> Size: ${globalStats.total_size} | Parity: ${globalStats.total_parity}`;
 
             } catch (e) {
                 console.warn("Stream heartbeat sync failed. Retrying...");

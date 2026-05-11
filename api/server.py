@@ -71,6 +71,27 @@ async def clear_all_data():
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
+@app.get("/api/stats")
+async def get_global_stats():
+    try:
+        query = """
+            SELECT 
+                COUNT(CASE WHEN a.predicted_bigsmall IS NOT NULL THEN 1 END) as total_size,
+                COUNT(CASE WHEN a.predicted_bigsmall = d.big_small THEN 1 END) as wins_size,
+                COUNT(CASE WHEN a.predicted_parity IS NOT NULL THEN 1 END) as total_parity,
+                COUNT(CASE WHEN a.predicted_parity = d.parity THEN 1 END) as wins_parity
+            FROM engine_audit a
+            INNER JOIN draw_history d ON a.issue_number = d.issue_number
+            WHERE a.is_skipped = false
+        """
+        res = await db.execute(query)
+        if not res:
+             return {"total_size": 0, "wins_size": 0, "total_parity": 0, "wins_parity": 0}
+        return res[0]
+    except Exception as e:
+        logger.error(f"Stats computation faulted: {e}")
+        return {"error": str(e)}
+
 @app.get("/api/download_excel")
 async def download_history_excel():
     try:
