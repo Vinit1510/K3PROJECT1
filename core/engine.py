@@ -192,7 +192,7 @@ class QuantumEngine:
             "uncertainty": round(float(uncertainty), 3),
             "entropy": round(float(current_features.get('sum_entropy', 0)), 3),
             "regime": current_regime,
-            "is_skipped": is_skipped,
+            "is_skipped": bool(is_skipped),
             "volatility": round(float(current_features.get('volatility_score', 0)), 3)
         }
         

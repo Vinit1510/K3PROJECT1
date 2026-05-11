@@ -44,7 +44,7 @@ def deploy():
     run_with_git("git add .")
     
     print("Solidifying snapshot...")
-    commit_msg = "Final Deployment: Entropy Vacuum Deficit Strategy Active + Total System Integration"
+    commit_msg = "CRITICAL HOTFIX: Standardize Numpy Scalar Serialization Types"
     run_with_git(f'git commit -m "{commit_msg}"')
 
     # 4. Verify branch and execute push ignition
