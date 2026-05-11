@@ -62,7 +62,7 @@ class FeatureEngineer:
         ent = row.get('sum_entropy', 0)
         var = row.get('rolling_sum_var', 0)
         
-        if vol > 0.8 or ent > 2.0:
+        if vol > 0.9 or ent > 2.3:
             return "CHAOTIC"
         if var < 1.5:
             return "COMPRESSED"

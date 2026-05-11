@@ -44,7 +44,7 @@ def deploy():
     run_with_git("git add .")
     
     print("Solidifying snapshot...")
-    commit_msg = "Power Tuning: Active Expert Isolation Mode deployed during Chaotic states"
+    commit_msg = "Recalibration Upgrade: Raised Entropy Ceiling to 2.30 and Volatility to 0.90 to restore optimal predictive normalcy"
     run_with_git(f'git commit -m "{commit_msg}"')
 
     # 4. Verify branch and execute push ignition

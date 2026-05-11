@@ -6,8 +6,8 @@ from typing import Dict, Any
 class ChaosVacuumStrategy(BaseStrategy):
     def __init__(self):
         super().__init__("ChaosVacuumCore")
-        # Dormancy trigger threshold
-        self.entropy_gate = 1.90
+        # Dormancy trigger threshold raised to match recalibrated regime
+        self.entropy_gate = 2.25
 
     async def analyze(self, history_df: pd.DataFrame, current_features: Dict[str, Any]) -> Dict[str, Any]:
         current_ent = float(current_features.get('sum_entropy', 0))
