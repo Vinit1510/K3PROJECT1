@@ -16,10 +16,16 @@ class ParityEngine(BaseStrategy):
         odd_count = last_n.count("ODD")
         even_count = last_n.count("EVEN")
         
-        # If severe imbalance in short term, predict mean reversion
+        # Dynamic logic: Catch minor imbalance, but RIDE major trends!
+        if odd_count >= 6:
+             return {"prediction": "ODD", "confidence": 0.7, "signal_strength": 0.8, "metadata": {"mode": "streak_rider"}}
+        elif even_count >= 6:
+             return {"prediction": "EVEN", "confidence": 0.7, "signal_strength": 0.8, "metadata": {"mode": "streak_rider"}}
+        
+        # If mild imbalance in short term, predict mean reversion
         if odd_count >= 4:
-             return {"prediction": "EVEN", "confidence": 0.65, "signal_strength": 0.6, "metadata": {}}
+             return {"prediction": "EVEN", "confidence": 0.65, "signal_strength": 0.6, "metadata": {"mode": "reversion"}}
         elif even_count >= 4:
-             return {"prediction": "ODD", "confidence": 0.65, "signal_strength": 0.6, "metadata": {}}
+             return {"prediction": "ODD", "confidence": 0.65, "signal_strength": 0.6, "metadata": {"mode": "reversion"}}
              
         return {"prediction": None, "confidence": 0, "signal_strength": 0, "metadata": {}}

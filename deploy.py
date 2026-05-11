@@ -44,7 +44,7 @@ def deploy():
     run_with_git("git add .")
     
     print("Solidifying snapshot...")
-    commit_msg = "Hotfix: Enable HEAD requests for UptimeRobot support + Full System Update"
+    commit_msg = "Upgrade: Self-Learning RL Calibration, Top-Sidebar Heat Meter, and Global Accuracies"
     run_with_git(f'git commit -m "{commit_msg}"')
 
     # 4. Verify branch and execute push ignition

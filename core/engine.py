@@ -73,6 +73,42 @@ class QuantumEngine:
         except ValueError:
             next_issue = "PENDING"
 
+        # --- SELF-LEARNING CALIBRATION MODULE ---
+        # Dynamically audits the last 3 rounds to detect "Hot" or "Cold" strategies.
+        momentum_multipliers = {}
+        try:
+            for strat in self.strategies:
+                momentum = 1.0
+                penalty = 0.0
+                # Evaluate past 3 completed cycles
+                for backstep in range(1, 4): 
+                    # past_context contains data BEFORE the target result arrived
+                    if len(enriched_df) <= backstep: continue
+                    past_context = enriched_df.iloc[:-backstep]
+                    
+                    # The target row contains the actual arrival result for this step
+                    target_row = enriched_df.iloc[-backstep]
+                    
+                    if len(past_context) < 8: continue
+                    
+                    back_res = await strat.analyze(past_context, past_context.iloc[-1].to_dict())
+                    b_pred = back_res.get("prediction")
+                    if b_pred:
+                         is_bs = b_pred in ["BIG", "SMALL"]
+                         actual = target_row.get("big_small") if is_bs else target_row.get("parity")
+                         
+                         if b_pred == actual:
+                              # Winning streak adds weight faster
+                              penalty -= 0.2
+                         else:
+                              # Labeled failure drastically slashes immediate authority
+                              penalty += 0.4
+                
+                # Finalize dynamic modifier range [0.2 to 1.3]
+                momentum_multipliers[strat.name] = max(0.2, min(1.3, 1.0 - penalty))
+        except Exception as calibrate_error:
+             logger.warn(f"Self-calibration drift ignored: {calibrate_error}")
+
         # Collect all predictions
         votes = []
         for strat in self.strategies:
@@ -81,11 +117,15 @@ class QuantumEngine:
             if pred_val:
                 # Classify target bucket
                 target = "BS" if pred_val in ["BIG", "SMALL"] else "PARITY"
+                
+                # Apply self-learning multiplier!
+                dyn_mult = momentum_multipliers.get(strat.name, 1.0)
+                
                 votes.append({
                     "strat": strat.name,
                     "target": target,
                     "pred": pred_val,
-                    "conf": res["confidence"] * strat.historical_accuracy,
+                    "conf": res["confidence"] * strat.historical_accuracy * dyn_mult,
                 })
 
         # 1. Handle BigSmall Aggregation
