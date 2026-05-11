@@ -44,7 +44,7 @@ def deploy():
     run_with_git("git add .")
     
     print("Solidifying snapshot...")
-    commit_msg = "CHAMPIONSHIP UPGRADE: Activated Proven Momentum-Pro Strategy replacing legacy engines"
+    commit_msg = "Diagnostic Ready: Massively expanded Excel Extractor limits for comprehensive system audit"
     run_with_git(f'git commit -m "{commit_msg}"')
 
     # 4. Verify branch and execute push ignition

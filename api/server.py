@@ -95,8 +95,8 @@ async def get_global_stats():
 @app.get("/api/download_excel")
 async def download_history_excel():
     try:
-        # Load rich historical dataset
-        df = await engine.get_latest_history(limit=1000)
+        # Lift constraints for mass analysis (50,000 items capacity)
+        df = await engine.get_latest_history(limit=50000)
         if df.empty:
              # Create an empty structured DF to avoid crash
              df = pd.DataFrame(columns=["issue_number", "dice_sum", "big_small", "parity"])
