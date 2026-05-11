@@ -113,7 +113,15 @@ class QuantumEngine:
 
         # Collect all predictions
         votes = []
+        is_chaotic_regime = (current_regime == "CHAOTIC")
+        
         for strat in self.strategies:
+            # EXPERT ISOLATION PROTOCOL
+            # During Chaos, standard strategies are blinded by randomness. 
+            # We SILENCE all generalists and force explicit reliance ONLY on the Specialist!
+            if is_chaotic_regime and strat.name != "ChaosVacuumCore":
+                 continue
+                 
             res = await strat.analyze(enriched_df, current_features)
             pred_val = res.get("prediction")
             if pred_val:

@@ -44,7 +44,7 @@ def deploy():
     run_with_git("git add .")
     
     print("Solidifying snapshot...")
-    commit_msg = "CRITICAL HOTFIX: Standardize Numpy Scalar Serialization Types"
+    commit_msg = "Power Tuning: Active Expert Isolation Mode deployed during Chaotic states"
     run_with_git(f'git commit -m "{commit_msg}"')
 
     # 4. Verify branch and execute push ignition
