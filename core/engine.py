@@ -7,7 +7,7 @@ from core.db import db
 from core.feature_store import feature_store
 from strategies.sum_trend import SumTrendStrategy
 from strategies.transition_engine import TransitionStrategy
-from strategies.parity_engine import ParityEngine
+from strategies.momentum_pro import MomentumProStrategy
 from strategies.chaos_vacuum import ChaosVacuumStrategy
 from core.uncertainty import UncertaintyEngine
 
@@ -18,7 +18,7 @@ class QuantumEngine:
         self.strategies = [
             SumTrendStrategy(),
             TransitionStrategy(),
-            ParityEngine(),
+            MomentumProStrategy(),
             ChaosVacuumStrategy()
         ]
         self.uncertainty_engine = None # initialized separately to avoid circular deps
