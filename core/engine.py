@@ -8,6 +8,7 @@ from core.feature_store import feature_store
 from strategies.sum_trend import SumTrendStrategy
 from strategies.transition_engine import TransitionStrategy
 from strategies.parity_engine import ParityEngine
+from strategies.chaos_vacuum import ChaosVacuumStrategy
 from core.uncertainty import UncertaintyEngine
 
 logger = logging.getLogger("k3_engine")
@@ -17,7 +18,8 @@ class QuantumEngine:
         self.strategies = [
             SumTrendStrategy(),
             TransitionStrategy(),
-            ParityEngine()
+            ParityEngine(),
+            ChaosVacuumStrategy()
         ]
         self.uncertainty_engine = None # initialized separately to avoid circular deps
         self.min_confidence_threshold = 0.6
@@ -162,13 +164,23 @@ class QuantumEngine:
 
         # Regime-based dynamic thresholds
         current_threshold = self.min_confidence_threshold
-        if current_regime == "CHAOTIC":
-            current_threshold += 0.15
-            uncertainty = min(1.0, uncertainty + 0.2)
+        is_chaotic = (current_regime == "CHAOTIC")
+        
+        if is_chaotic:
+            # During detected Chaos, our specialized vacuum logic manages itself.
+            # We Lower the restrictive gates and ignore traditional uncertainty filters to let it strike!
+            current_threshold = 0.55
+            uncertainty = min(1.0, uncertainty) # cap don't escalate
         
         # Decides skip based mostly on confidence of active predictions
         max_conf = max(bs_conf, par_conf)
-        is_skipped = (max_conf < current_threshold) or (uncertainty > self.max_uncertainty_threshold)
+        
+        if is_chaotic:
+            # Chaos Override: Trust Confidence alone, bypass uncertainty cap
+            is_skipped = (max_conf < current_threshold)
+        else:
+            is_skipped = (max_conf < current_threshold) or (uncertainty > self.max_uncertainty_threshold)
+            
         if max_conf == 0:
              is_skipped = True
 
