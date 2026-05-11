@@ -42,6 +42,7 @@ app.add_middleware(
 )
 
 # API Routes
+@app.head("/api/health")
 @app.get("/api/health")
 async def health():
     return {"status": "alive"}
@@ -98,6 +99,7 @@ async def download_history_excel():
 PUBLIC_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "public")
 os.makedirs(PUBLIC_DIR, exist_ok=True)
 
+@app.head("/")
 @app.get("/")
 async def read_index():
     return FileResponse(os.path.join(PUBLIC_DIR, "index.html"))
